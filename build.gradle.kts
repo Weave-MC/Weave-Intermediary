@@ -4,7 +4,7 @@ plugins {
     `maven-publish`
 }
 
-group = "net.weavemc.intermediary"
+group = "net.weavemc.internals"
 version = "1.0.0"
 
 kotlin {
@@ -39,7 +39,7 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
             groupId = "net.weavemc"
-            artifactId = "intermediary"
+            artifactId = "internals"
             version = project.version as String
         }
     }

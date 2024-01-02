@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalTypeInference::class)
 
-package net.weavemc.intermediary
+package net.weavemc.internals
 
 import com.grappenmaker.mappings.*
 import kotlinx.serialization.SerialName
