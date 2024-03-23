@@ -20,7 +20,7 @@ dependencies {
     api("org.ow2.asm:asm:9.4")
     api("org.ow2.asm:asm-commons:9.4")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    implementation("com.grappenmaker:mappings-util:0.2.0")
+    implementation("io.github.770grappenmaker:mappings-util:0.1.2")
 }
 
 publishing {

@@ -1,13 +1,9 @@
-@file:OptIn(ExperimentalTypeInference::class)
-
 package net.weavemc.internals
 
 import com.grappenmaker.mappings.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.tree.ClassNode
 import java.io.File
 import java.io.InputStream
 import java.net.URL
@@ -16,25 +12,20 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.jar.JarFile
 import java.util.zip.ZipInputStream
-import kotlin.experimental.ExperimentalTypeInference
 import kotlin.io.path.*
 
-fun main() {
-    MappingsRetrieval.loadMergedWeaveMappings("1.8.9", getVanillaMinecraftJar())
-}
-
-fun getVanillaMinecraftJar(): File {
+fun getVanillaMinecraftJar(version: String): File {
     val os = System.getProperty("os.name").lowercase()
-    val minecraftPath = Paths.get(System.getProperty("user.home"), when {
-        os.contains("win") -> "AppData${File.separator}Roaming${File.separator}.minecraft"
-        os.contains("mac") -> "Library${File.separator}Application Support${File.separator}minecraft"
-        os.contains("nix") || os.contains("nux") || os.contains("aix") -> ".minecraft"
-        else -> error("Failed to retrieve Vanilla Minecraft Jar due to unsupported OS.")
-    })
+    val minecraftPath = Paths.get(
+        System.getProperty("user.home"), when {
+            os.contains("win") -> "AppData${File.separator}Roaming${File.separator}.minecraft"
+            os.contains("mac") -> "Library${File.separator}Application Support${File.separator}minecraft"
+            os.contains("nix") || os.contains("nux") || os.contains("aix") -> ".minecraft"
+            else -> error("Failed to retrieve Vanilla Minecraft Jar due to unsupported OS.")
+        }
+    )
 
-    return minecraftPath.resolve("versions")
-        .resolve("1.8.9")
-        .resolve("1.8.9.jar").toFile()
+    return minecraftPath.resolve("versions").resolve(version).resolve("$version.jar").toFile()
 }
 
 object MappingsRetrieval {
@@ -109,7 +100,7 @@ object MappingsRetrieval {
                 MappingsLoader.loadMappings(joinedMappings.decodeToString().nonBlankLines())
                     .fixSRGNamespaces()
                     .removeRedundancy(jar)
-                    .recoverFieldDescs(jar)
+                    .recoverFieldDescriptors(jar)
             }
 
             val finalMappings = originalMappings.mergeSRGWithMCP(
@@ -169,63 +160,6 @@ object MappingsRetrieval {
 
     fun mappingsCache(id: String, version: String) =
         Path(System.getProperty("user.home"), ".weave", ".cache", "mappings", "${id}_$version", "mappings.tiny")
-
-    @OverloadResolutionByLambdaReturnType
-    fun Mappings.recoverFieldDescs(bytesProvider: (name: String) -> ByteArray?): Mappings =
-        recoverFieldDescs { name -> bytesProvider(name)?.let { b -> ClassNode().also { ClassReader(b).accept(it, 0) } } }
-
-    @JvmName("recoverDescsByNode")
-    @OverloadResolutionByLambdaReturnType
-    fun Mappings.recoverFieldDescs(nodeProvider: (name: String) -> ClassNode?): Mappings = GenericMappings(
-        namespaces,
-        classes.map { oc ->
-            val node by lazy { nodeProvider(oc.names.first()) }
-            val fieldsByName by lazy { node?.fields?.associateBy { it.name } ?: emptyMap() }
-
-            oc.copy(fields = oc.fields.mapNotNull { of ->
-                of.copy(desc = of.desc ?: (fieldsByName[of.names.first()]?.desc ?: return@mapNotNull null))
-            })
-        }
-    )
-
-    fun Mappings.recoverFieldDescs(file: JarFile) = recoverFieldDescs a@{
-        file.getInputStream(file.getJarEntry("$it.class") ?: return@a null).readBytes()
-    }
-
-    fun MappedMethod.isData() = desc == "(Ljava/lang/Object;)Z" && names.first() == "equals" ||
-            desc == "()I" && names.first() == "hashCode" ||
-            desc == "()Ljava/lang/String;" && names.first() == "toString" ||
-            names.first() == "<init>" || names.first() == "<clinit>"
-
-    fun Mappings.removeRedundancy(bytesProvider: (name: String) -> ByteArray?): Mappings = GenericMappings(
-        namespaces,
-        classes.map { oc ->
-            val name = oc.names.first()
-            val ourSigs = hashSetOf<String>()
-            val superSigs = hashSetOf<String>()
-
-            walkInheritance(bytesProvider, name) { curr ->
-                val target = if (curr == name) ourSigs else superSigs
-                bytesProvider(curr)?.let { b -> ClassNode().also { ClassReader(b).accept(it, 0) } }
-                    ?.methods?.forEach { m -> target += "${m.name}${m.desc}" }
-
-                false
-            }
-
-            oc.copy(methods = oc.methods.filter {
-                val sig = "${it.names.first()}${it.desc}"
-                sig in ourSigs && sig !in superSigs && !it.isData()
-            })
-        }
-    )
-
-    fun Mappings.removeRedundancy(file: JarFile): Mappings {
-        val cache = hashMapOf<String, ByteArray?>()
-
-        return removeRedundancy a@{
-            cache.getOrPut(it) { file.getInputStream(file.getJarEntry("$it.class") ?: return@a null).readBytes() }
-        }
-    }
 
     inline fun Path.getOrPut(block: () -> Iterable<CharSequence>): InputStream {
         createParentDirectories()
