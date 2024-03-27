@@ -69,7 +69,8 @@ object GameInfo {
     val gameClient: MinecraftClient by lazy {
         when {
             classExists("com.moonsworth.lunar.genesis.Genesis") -> MinecraftClient.LUNAR
-            versionString.contains("forge") -> MinecraftClient.FORGE
+            classExists("net.minecraftforge.fml.common.Loader") -> MinecraftClient.FORGE
+//            versionString.contains("forge") -> MinecraftClient.FORGE
             versionString.contains("labymod") -> MinecraftClient.LABYMOD
             else -> MinecraftClient.VANILLA
         }
