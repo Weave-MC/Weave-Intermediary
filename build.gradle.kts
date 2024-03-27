@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.10"
-    kotlin("plugin.serialization") version "1.9.10"
+    kotlin("jvm") version "1.9.23"
+    kotlin("plugin.serialization") version "1.9.23"
     `maven-publish`
 }
 
@@ -20,7 +20,7 @@ dependencies {
     api("org.ow2.asm:asm:9.4")
     api("org.ow2.asm:asm-commons:9.4")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    implementation("io.github.770grappenmaker:mappings-util:0.1.2")
+    implementation("io.github.770grappenmaker:mappings-util:0.1.3")
 }
 
 publishing {

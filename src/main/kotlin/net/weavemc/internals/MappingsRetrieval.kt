@@ -4,6 +4,7 @@ import com.grappenmaker.mappings.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.weavemc.internals.MappingsType.*
 import java.io.File
 import java.io.InputStream
 import java.net.URL
@@ -17,11 +18,11 @@ import kotlin.io.path.*
 fun getVanillaMinecraftJar(version: String): File {
     val os = System.getProperty("os.name").lowercase()
     val minecraftPath = Paths.get(
-        System.getProperty("user.home"), when {
-            os.contains("win") -> "AppData${File.separator}Roaming${File.separator}.minecraft"
-            os.contains("mac") -> "Library${File.separator}Application Support${File.separator}minecraft"
-            os.contains("nix") || os.contains("nux") || os.contains("aix") -> ".minecraft"
-            else -> error("Failed to retrieve Vanilla Minecraft Jar due to unsupported OS.")
+        System.getProperty("user.home"), *when {
+            os.contains("win") -> arrayOf("AppData", "Roaming", ".minecraft")
+            os.contains("mac") -> arrayOf("Library", "Application Support", "minecraft")
+            os.contains("nix") || os.contains("nux") || os.contains("aix") -> arrayOf(".minecraft")
+            else -> error("Failed to retrieve Vanilla Minecraft Jar due to an unsupported OS.")
         }
     )
 
@@ -87,7 +88,7 @@ object MappingsRetrieval {
         val mappingsChannel = if (versionDecimal >= 15.1) "config" else "snapshot"
         if (versionDecimal >= 16) return null
 
-        return mappingsCache("mcp", version).getOrPut {
+        return mappingsCache(MCP, version).getOrPut {
             val url = "$forgeMavenRoot/mcp_$mappingsChannel/maven-metadata.xml"
             val mcVersion = parseMCPVersions(url)[version] ?: error("Could not find version $version in $url")
             val srgMappingsContent = mcVersion.srgNamesStream(versionDecimal >= 13).readEntries()
@@ -137,7 +138,7 @@ object MappingsRetrieval {
     }
 
     fun yarnMappingsStream(version: String, gameJar: File): InputStream? {
-        return mappingsCache("yarn", version).getOrPut {
+        return mappingsCache(YARN, version).getOrPut {
             val versions = URL("$yarnMavenRoot/maven-metadata.xml").readText().parseXMLVersions()
             val targetVersion = versions
                 .filter { it.substringBefore('+') == version }
@@ -158,8 +159,8 @@ object MappingsRetrieval {
         }
     }
 
-    fun mappingsCache(id: String, version: String) =
-        Path(System.getProperty("user.home"), ".weave", ".cache", "mappings", "${id}_$version", "mappings.tiny")
+    fun mappingsCache(type: MappingsType, version: String) =
+        Path(System.getProperty("user.home"), ".weave", ".cache", "mappings", "${type.id}_$version", "mappings.tiny")
 
     inline fun Path.getOrPut(block: () -> Iterable<CharSequence>): InputStream {
         createParentDirectories()
@@ -174,7 +175,7 @@ object MappingsRetrieval {
     internal inline fun <reified T : Any> String.decodeJSON() = json.decodeFromString<T>(this)
 
     private fun mojangMappingsStream(version: String, gameJar: File): InputStream? {
-        return mappingsCache("mojmap", version).getOrPut {
+        return mappingsCache(MOJANG, version).getOrPut {
             val manifest = URL("https://launchermeta.mojang.com/mc/game/version_manifest_v2.json")
                 .readText().decodeJSON<VersionManifest>()
 
@@ -219,27 +220,26 @@ object MappingsRetrieval {
     private data class VersionDownload(val url: String, val sha1: String)
 
     private fun allMappings(version: String, gameJar: File) =
-        listOf("mcp", "yarn", "mojmap").mapNotNull { loadWeaveMappings(it, version, gameJar) }
+        (MappingsType.entries - MERGED).mapNotNull { loadWeaveMappings(it, version, gameJar) }
 
     private fun mergedMappingsStream(version: String, gameJar: File): InputStream =
-        mappingsCache("merged", version).getOrPut {
+        mappingsCache(MERGED, version).getOrPut {
             val joined = allMappings(version, gameJar).map { (id, mappings) ->
-                mappings.renameNamespaces(mappings.namespaces.map { if (it == "official") it else "$id-$it" })
+                mappings.renameNamespaces(mappings.namespaces.map { if (it == "official") it else id.resolve(it) })
             }.join("official")
 
             val otherNs = joined.namespaces - "official"
             joined.reorderNamespaces(listOf("official") + otherNs).asTinyMappings(v2 = true).write()
         }
 
-    data class WeaveMappings(val id: String, val mappings: Mappings)
+    fun loadWeaveMappings(mappings: MappingsType, version: String, gameJar: File) = when (mappings) {
+        YARN -> yarnMappingsStream(version, gameJar)
+        MCP -> mcpMappingsStream(version, gameJar)
+        MOJANG -> mojangMappingsStream(version, gameJar)
+        MERGED -> mergedMappingsStream(version, gameJar)
+    }?.let { WeaveMappings(mappings, MappingsLoader.loadMappings(it.readBytes().decodeToString().lines())) }
 
-    fun loadWeaveMappings(id: String, version: String, gameJar: File) = when (id) {
-        "yarn" -> yarnMappingsStream(version, gameJar)
-        "mcp" -> mcpMappingsStream(version, gameJar)
-        "mojmap" -> mojangMappingsStream(version, gameJar)
-        "merged" -> mergedMappingsStream(version, gameJar)
-        else -> error("Unknown weave mappings id $id")
-    }?.let { WeaveMappings(id, MappingsLoader.loadMappings(it.readBytes().decodeToString().lines())) }
-
-    fun loadMergedWeaveMappings(version: String, gameJar: File) = loadWeaveMappings("merged", version, gameJar)!!
+    fun loadMergedWeaveMappings(version: String, gameJar: File) = loadWeaveMappings(MERGED, version, gameJar)!!
 }
+
+data class WeaveMappings(val type: MappingsType, val mappings: Mappings)
