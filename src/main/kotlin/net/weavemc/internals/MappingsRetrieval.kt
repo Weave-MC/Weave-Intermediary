@@ -84,6 +84,9 @@ object MappingsRetrieval {
 
     fun mcpMappingsStream(version: String, gameJar: File): InputStream? {
         val versionDecimal = version.substringAfter("1.").toDouble()
+
+        // TODO: figure out 1.12.2
+        if (versionDecimal == 12.2) return null
         val joinedMappingsPath = if (versionDecimal >= 13) "config/joined.tsrg" else "joined.srg"
         val mappingsChannel = if (versionDecimal >= 15.1) "config" else "snapshot"
         if (versionDecimal >= 16) return null
@@ -185,7 +188,7 @@ object MappingsRetrieval {
             require(mappings.size != -1) { "Invalid mappings entry for version $version: $mappings" }
 
             JarFile(gameJar).use { jar ->
-                MappingsLoader.loadMappings(URL(mappings.url).readText().lines())
+                MappingsLoader.loadMappings(URL(mappings.url).readText().trim().lines())
                     .filterClasses { it.names.first().substringAfterLast('/') != "package-info" }
                     .reorderNamespaces("official", "named")
                     .removeRedundancy(jar)

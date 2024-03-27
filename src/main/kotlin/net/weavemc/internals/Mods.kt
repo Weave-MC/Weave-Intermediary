@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
  * @property entryPoints The loaded [ModInitializer] entry points of the mod.
  * @property namespace The mappings namespace this mod was created with.
  * @property dependencies The dependencies this mod requires, at a list of [modId]s.
+ * @property compiledFor The version id this mod was compiled for
  */
 @Serializable
 data class ModConfig(
@@ -21,5 +22,6 @@ data class ModConfig(
     val mixinConfigs: List<String> = emptyList(),
     val hooks: List<String> = emptyList(),
     val namespace: String,
-    val dependencies: List<String> = emptyList()
+    val dependencies: List<String> = emptyList(),
+    val compiledFor: String? = null,
 )
