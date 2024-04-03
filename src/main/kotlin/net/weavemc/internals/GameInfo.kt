@@ -1,9 +1,6 @@
 package net.weavemc.internals
 
-import kotlin.properties.Delegates
-import kotlin.properties.PropertyDelegateProvider
 import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
 enum class MinecraftVersion(
     val protocol: Int,
