@@ -20,7 +20,7 @@ dependencies {
     api("org.ow2.asm:asm:9.4")
     api("org.ow2.asm:asm-commons:9.4")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    implementation("io.github.770grappenmaker:mappings-util:0.1.3")
+    implementation("io.github.770grappenmaker:mappings-util:0.1.4")
 }
 
 publishing {
@@ -40,7 +40,7 @@ publishing {
             from(components["java"])
             groupId = "net.weavemc"
             artifactId = "internals"
-            version = project.version as String
+            version = project.version as String + "-PRE2"
         }
     }
 }
