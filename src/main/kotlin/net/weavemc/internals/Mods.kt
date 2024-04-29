@@ -21,6 +21,7 @@ data class ModConfig(
     val entryPoints: List<String> = emptyList(),
     val mixinConfigs: List<String> = emptyList(),
     val hooks: List<String> = emptyList(),
+    val tweakers: List<String> = emptyList(),
     val namespace: String,
     val dependencies: List<String> = emptyList(),
     val compiledFor: String? = null,
