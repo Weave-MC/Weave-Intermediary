@@ -40,7 +40,7 @@ publishing {
             from(components["java"])
             groupId = "net.weavemc"
             artifactId = "internals"
-            version = project.version as String + "-PRE2"
+            version = "${project.version}-b.2"
         }
     }
 }
