@@ -42,6 +42,7 @@ enum class MinecraftClient(
 }
 
 object GameInfo {
+    @Suppress("UNCHECKED_CAST")
     val rawGameInfo: Map<String, String>
         get() = System.getProperties()["weave.game.info"] as? Map<String, String>
             ?: error("Failed to retrieve Minecraft arguments")

@@ -1,0 +1,16 @@
+[versions]
+kotlin = "2.0.0"
+asm = "9.7"
+
+[libraries]
+mappings = { module = "io.github.770grappenmaker:mappings-util", version = "0.1.6" }
+asm = { module = "org.ow2.asm:asm", version.ref = "asm" }
+asm-commons = { module = "org.ow2.asm:asm-commons", version.ref = "asm" }
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.5.1" }
+
+[plugins]
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+
+[bundles]
+asm = [ "asm", "asm-commons" ]
